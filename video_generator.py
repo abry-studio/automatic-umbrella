@@ -1,26 +1,112 @@
-from moviepy import ImageClip, AudioFileClip
+from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, CompositeAudioClip
 import os
+import math
+from PIL import Image, ImageDraw, ImageFont
+import numpy as np
+import tempfile
 
-def create_video(image_path, audio_path, output_path="output_video.mp4"):
+def create_text_clip(text, duration, width=1080, height=1920):
+    # 투명한 배경의 이미지 생성
+    img = Image.new('RGBA', (width, height), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    try:
+        font = ImageFont.truetype("malgun.ttf", 65) # 맑은 고딕
+    except:
+        font = ImageFont.load_default()
+        
+    # 텍스트 크기 계산
+    bbox = draw.textbbox((0, 0), text, font=font)
+    text_w = bbox[2] - bbox[0]
+    
+    # 텍스트 위치 (가운데 하단)
+    x = (width - text_w) // 2
+    y = height - 400
+    
+    # 테두리 (검은색)
+    outline_color = "black"
+    draw.text((x-3, y-3), text, font=font, fill=outline_color)
+    draw.text((x+3, y-3), text, font=font, fill=outline_color)
+    draw.text((x-3, y+3), text, font=font, fill=outline_color)
+    draw.text((x+3, y+3), text, font=font, fill=outline_color)
+    
+    # 텍스트 본문 (노란색)
+    draw.text((x, y), text, font=font, fill="yellow")
+    
+    # 임시 파일로 저장 후 ImageClip으로 불러오기 (MoviePy 호환성)
+    temp_dir = tempfile.gettempdir()
+    tmp_path = os.path.join(temp_dir, f"sub_{hash(text)}.png")
+    img.save(tmp_path)
+    
+    txt_clip = ImageClip(tmp_path).with_duration(duration)
+    return txt_clip
+
+def create_video(image_paths, audio_path, output_path="output_video.mp4", script_text="", bgm_path=None):
     """
-    이미지와 음성(TTS) 파일을 결합하여 하나의 영상(MP4)으로 만듭니다.
+    여러 장의 이미지와 음성(TTS), 배경음악(BGM), 자막을 결합하여 숏폼 영상을 만듭니다.
     """
-    if not image_path or not audio_path or not os.path.exists(image_path) or not os.path.exists(audio_path):
+    if not image_paths or not audio_path or not os.path.exists(audio_path):
         return None
         
+    if isinstance(image_paths, str):
+        image_paths = [image_paths]
+        
+    # 실제로 존재하는 이미지 필터링
+    valid_images = [img for img in image_paths if os.path.exists(img)]
+    if not valid_images:
+        return None
+
     try:
-        # 1. 오디오 로드 및 길이 확인
+        # 1. 오디오 로드
         audio_clip = AudioFileClip(audio_path)
         duration = audio_clip.duration
         
-        # 2. 이미지 로드 및 오디오 길이에 맞춤
-        # MoviePy 2.0 버전 문법 적용 (with_duration, with_audio)
-        image_clip = ImageClip(image_path).with_duration(duration)
+        # 2. 이미지 슬라이드쇼 구성
+        num_images = len(valid_images)
+        img_duration = duration / num_images
         
-        # 3. 비디오에 오디오 합성
-        video_clip = image_clip.with_audio(audio_clip)
+        clips = []
+        for img_path in valid_images:
+            # 줌인 효과 대신 단순 슬라이드쇼로 묶기 (안정성 확보)
+            c = ImageClip(img_path).with_duration(img_duration)
+            clips.append(c)
+            
+        video_clip = concatenate_videoclips(clips, method="compose")
         
-        # 4. 렌더링 (빠른 속도를 위해 ultrafast 적용)
+        # 3. 배경음악(BGM) 합성
+        if bgm_path and os.path.exists(bgm_path):
+            bgm_clip = AudioFileClip(bgm_path).with_volume_scaled(0.1) # BGM 볼륨 10%로 줄이기
+            
+            # BGM이 더 짧으면 반복, 길면 자르기
+            if bgm_clip.duration < duration:
+                # 간단한 반복 처리 (필요시 moviepy audio_loop 사용)
+                num_loops = math.ceil(duration / bgm_clip.duration)
+                bgm_clip = concatenate_videoclips([bgm_clip] * num_loops).with_duration(duration)
+            else:
+                bgm_clip = bgm_clip.with_duration(duration)
+                
+            # 음성과 BGM 합성
+            final_audio = CompositeAudioClip([audio_clip, bgm_clip])
+            video_clip = video_clip.with_audio(final_audio)
+        else:
+            video_clip = video_clip.with_audio(audio_clip)
+            
+        # 4. 자막 생성 및 합성
+        if script_text:
+            lines = [line.strip() for line in script_text.split('\n') if line.strip()]
+            if lines:
+                line_duration = duration / len(lines)
+                subtitle_clips = []
+                for i, line in enumerate(lines):
+                    # 너무 긴 줄은 적당히 자르거나 한 줄로 표시
+                    if len(line) > 20:
+                        line = line[:20] + "\\n" + line[20:]
+                    txt_clip = create_text_clip(line, line_duration).with_position('center', 'center').with_start(i * line_duration)
+                    subtitle_clips.append(txt_clip)
+                
+                # 영상과 자막 합성
+                video_clip = CompositeVideoClip([video_clip] + subtitle_clips)
+        
+        # 5. 렌더링
         video_clip.write_videofile(
             output_path, 
             fps=24, 

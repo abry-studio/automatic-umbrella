@@ -45,6 +45,14 @@ def analyze_shorts(transcript, image_info=None, script_type="standard", video_pa
 - 예의 바르면서도 흡입력 있는 스토리텔링, 강력한 훅을 포함하세요.
 - Vrew나 CapCut 같은 프로그램에 바로 복사해서 더빙에 사용할 수 있도록 화자나 효과음 지시문 없이 '순수 대본 텍스트' 형식으로 깔끔하게 포맷팅해주세요.
 """
+
+    prompt += """
+[모듈 4: AI 이미지 생성 프롬프트 (Image Generation Prompts for Google Flow/Midjourney)]
+- 위 대본 흐름에 맞춰 영상 배경이나 컷으로 쓸 수 있는 이미지 프롬프트 5개를 영어로 작성해주세요.
+- [일관성 유지 필수]: 5장의 이미지에 등장하는 주인공 캐릭터(혹은 제품)가 모두 '동일 인물/동일 제품'처럼 보이도록 고정된 핵심 키워드(예: "a 60-year-old Korean man with silver hair wearing a beige knit sweater", "a sleek black smart watch with a neon green strap")를 5개 프롬프트 모두에 공통으로 포함하세요.
+- 프롬프트 구조 예시: [고정 캐릭터/제품 설명], [현재 장면의 행동이나 배경 묘사], [조명/카메라 구도], [스타일(photorealistic, cinematic 등)]
+- 결과물은 1번부터 5번까지 번호를 매겨서 프롬프트 텍스트만 깔끔하게 출력해주세요.
+"""
     
     import time
     

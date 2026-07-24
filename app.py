@@ -57,11 +57,13 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
         
         clean_script = extract_script(analysis_result)
         
+        audio_filename = ""
+        video_filename = ""
+        
         if clean_script:
             safe_title = title
             audio_filename = f"{out_dir}/음성_로컬_{safe_title}.mp3"
             tts_path = create_tts(clean_script, filename=audio_filename, lang='ko', slow=slow_tts)
-            video_filename = ""
             if tts_path:
                 audio_files.append(tts_path)
                 if image_files:
@@ -69,17 +71,19 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
                     video_path = create_video(image_files, tts_path, output_path=video_filename, script_text=clean_script, bgm_path=bgm_file)
                     if video_path:
                         video_files.append(video_path)
+                    else:
+                        video_filename = ""
                         
-            results.append({
-                "작업날짜": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
-                "유튜브_주소": "로컬 영상 업로드",
-                "제목": title,
-                "상태": "성공",
-                "분석결과": analysis_result,
-                "추출대본": clean_script,
-                "생성된_음성": os.path.basename(audio_filename) if clean_script else "",
-                "생성된_영상": os.path.basename(video_filename) if (clean_script and image_files) else ""
-            })
+        results.append({
+            "작업날짜": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
+            "유튜브_주소": "로컬 영상 업로드",
+            "제목": title,
+            "상태": "성공",
+            "분석결과": analysis_result,
+            "추출대본": clean_script,
+            "생성된_음성": os.path.basename(audio_filename) if audio_filename else "",
+            "생성된_영상": os.path.basename(video_filename) if video_filename else ""
+        })
             
     # 2. 기존 URL 배치 처리
     for i, url in enumerate(urls):
@@ -112,10 +116,14 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
         
         clean_script = extract_script(analysis_result)
         
+        audio_filename = ""
+        video_filename = ""
+        
         if clean_script:
             safe_title = re.sub(r'[\\/*?:"<>|]', "", title)[:20]
             audio_filename = f"{out_dir}/음성_{i+1}_{safe_title}.mp3"
             tts_path = create_tts(clean_script, filename=audio_filename, lang='ko', slow=slow_tts)
+            
             if tts_path:
                 audio_files.append(tts_path)
                 # 사용자가 이미지를 업로드했다면, 오디오/BGM/자막과 결합하여 MP4 자동 생성
@@ -124,6 +132,8 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
                     video_path = create_video(image_files, tts_path, output_path=video_filename, script_text=clean_script, bgm_path=bgm_file)
                     if video_path:
                         video_files.append(video_path)
+                    else:
+                        video_filename = "" # 생성 실패 시 초기화
                 
         results.append({
             "작업날짜": datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
@@ -132,8 +142,8 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
             "상태": "성공",
             "분석결과": analysis_result,
             "추출대본": clean_script,
-            "생성된_음성": os.path.basename(audio_filename) if clean_script else "",
-            "생성된_영상": os.path.basename(video_filename) if (clean_script and image_files) else ""
+            "생성된_음성": os.path.basename(audio_filename) if audio_filename else "",
+            "생성된_영상": os.path.basename(video_filename) if video_filename else ""
         })
         
     excel_path = f"{out_dir}/분석결과_{timestamp}.xlsx"
@@ -152,8 +162,60 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
     preview_video = video_files[-1] if video_files else None
 
     return all_markdown_output, preview_audio, preview_video, zip_path
+custom_css = """
+/* 기본 배경 (다크 & 그라데이션) */
+body, .gradio-container {
+    background: linear-gradient(135deg, #0f2027, #203a43, #2c5364) !important;
+    color: #e0e0e0 !important;
+    font-family: 'Pretendard', 'Apple SD Gothic Neo', sans-serif !important;
+}
 
-with gr.Blocks(title="유튜브 쇼츠 제품/시장성 분석기", theme=gr.themes.Soft()) as app:
+/* 탭 버튼 스타일 */
+.tab-nav {
+    border-bottom: 2px solid rgba(255,255,255,0.1) !important;
+    margin-bottom: 15px !important;
+}
+.tab-nav button {
+    font-weight: 600 !important;
+    color: #a0a0a0 !important;
+    transition: all 0.3s ease !important;
+    border: none !important;
+    border-radius: 8px 8px 0 0 !important;
+    background: transparent !important;
+}
+.tab-nav button.selected {
+    background: linear-gradient(90deg, #FF416C, #FF4B2B) !important;
+    color: white !important;
+    box-shadow: 0 -4px 15px rgba(255, 75, 43, 0.4) !important;
+}
+
+/* 메인 실행 버튼 스타일 */
+button.primary {
+    background: linear-gradient(45deg, #11998e, #38ef7d) !important;
+    border: none !important;
+    color: white !important;
+    font-size: 18px !important;
+    font-weight: 800 !important;
+    border-radius: 12px !important;
+    padding: 15px !important;
+    transition: transform 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94), box-shadow 0.2s !important;
+}
+button.primary:hover {
+    transform: translateY(-3px) scale(1.02) !important;
+    box-shadow: 0 10px 25px rgba(56, 239, 125, 0.5) !important;
+}
+
+/* 텍스트 그라데이션 포인트 */
+h1 {
+    background: linear-gradient(to right, #00c6ff, #0072ff) !important;
+    -webkit-background-clip: text !important;
+    -webkit-text-fill-color: transparent !important;
+    font-weight: 900 !important;
+    text-align: center !important;
+}
+"""
+
+with gr.Blocks(title="유튜브 쇼츠 제품/시장성 분석기", theme=gr.themes.Base(), css=custom_css) as app:
     gr.Markdown("# 🚀 궁극의 쇼츠 자동 매칭 및 비디오 공장")
     gr.Markdown("복잡한 캡컷(CapCut)은 이제 안녕! 유튜브 주소나 내 영상을 넣으면, 사진과 음악이 곁들여진 **최종 영상(MP4)**을 1분 만에 뽑아드립니다.")
     

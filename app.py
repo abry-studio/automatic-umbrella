@@ -275,4 +275,8 @@ with gr.Blocks(title="유튜브 쇼츠 제품/시장성 분석기", theme=gr.the
     )
 
 if __name__ == "__main__":
-    app.launch(inbrowser=True)
+    print("\n" + "="*50)
+    print("🚀 서버가 실행되었습니다! 아래 제공되는 공개 링크(public URL)를 복사하세요.")
+    print("💡 이 링크를 복사해두면 PC방이나 스마트폰에서도 접속할 수 있습니다!")
+    print("="*50 + "\n")
+    app.launch(inbrowser=True, share=True)

@@ -1,0 +1,9 @@
+gradio
+google-genai
+yt-dlp
+youtube-transcript-api
+moviepy
+edge-tts
+python-dotenv
+pillow
+openpyxl

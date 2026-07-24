@@ -21,7 +21,7 @@ def extract_script(analysis_result):
     clean_script = re.sub(r'[*#_\[\]\-]', '', script_text).strip()
     return clean_script
 
-def process_batch_data(urls_text, source_video, image_files, bgm_file, script_type, slow_tts):
+def process_batch_data(urls_text, source_video, image_files, bgm_file, script_type, slow_tts, generate_image_prompt):
     urls = [url.strip() for url in urls_text.split('\n') if url.strip()]
     
     # 소스 비디오가 없고 URL도 없으면 에러
@@ -52,7 +52,7 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
             if "오류" in image_info:
                 image_info = None
                 
-        analysis_result = analyze_shorts("", image_info=image_info, script_type=script_mode, video_path=source_video)
+        analysis_result = analyze_shorts("", image_info=image_info, script_type=script_mode, video_path=source_video, generate_image_prompt=generate_image_prompt)
         all_markdown_output += analysis_result + "\n\n---\n"
         
         clean_script = extract_script(analysis_result)
@@ -111,7 +111,7 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
             if "오류" in image_info:
                 image_info = None
                 
-        analysis_result = analyze_shorts(transcript, image_info, script_type=script_mode)
+        analysis_result = analyze_shorts(transcript, image_info, script_type=script_mode, generate_image_prompt=generate_image_prompt)
         all_markdown_output += analysis_result + "\n\n---\n"
         
         clean_script = extract_script(analysis_result)
@@ -236,12 +236,15 @@ with gr.Blocks(title="유튜브 쇼츠 제품/시장성 분석기", theme=gr.the
                 
         with gr.Tab("3. ⚙️ 대본 및 AI 설정"):
             with gr.Row():
-                script_type_input = gr.Radio(
-                    choices=["📝 표준/전체 대본 (Standard Full Script)", "🛒 15초 쇼핑/커머스 전용 대본 (15-Sec Shopping Shorts)"],
-                    value="🛒 15초 쇼핑/커머스 전용 대본 (15-Sec Shopping Shorts)",
-                    label="대본 생성 모드"
-                )
-                tts_speed = gr.Checkbox(label="음성 속도 느리게 (중장년층 친화적)", value=False)
+                with gr.Column():
+                    script_type_input = gr.Radio(
+                        choices=["📝 표준/전체 대본 (Standard Full Script)", "🛒 15초 쇼핑/커머스 전용 대본 (15-Sec Shopping Shorts)"],
+                        value="🛒 15초 쇼핑/커머스 전용 대본 (15-Sec Shopping Shorts)",
+                        label="대본 생성 모드"
+                    )
+                with gr.Column():
+                    generate_image_prompt_input = gr.Checkbox(label="🎨 구글 플로우용 이미지 프롬프트 5개 생성 (고정 키워드 포함)", value=True)
+                    tts_speed = gr.Checkbox(label="🐌 음성 속도 느리게 (중장년층 친화적)", value=False)
                 
     analyze_btn = gr.Button("🔥 대본 분석 및 최종 숏폼 영상 제작하기", variant="primary", size="lg")
     
@@ -256,7 +259,7 @@ with gr.Blocks(title="유튜브 쇼츠 제품/시장성 분석기", theme=gr.the
             
     analyze_btn.click(
         fn=process_batch_data, 
-        inputs=[yt_input, source_video, img_input, bgm_input, script_type_input, tts_speed], 
+        inputs=[yt_input, source_video, img_input, bgm_input, script_type_input, tts_speed, generate_image_prompt_input], 
         outputs=[result_output, audio_output, video_output, download_output]
     )
 

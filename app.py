@@ -1,5 +1,5 @@
 import gradio as gr
-from youtube_parser import get_youtube_info
+from youtube_parser import get_youtube_info, download_video_for_analysis
 from image_processor import analyze_image
 from analyzer import analyze_shorts
 from tts_generator import create_tts
@@ -93,16 +93,18 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
         title = info.get("title", f"영상_{i+1}")
         
         if info.get("error"):
-            all_markdown_output += f"❌ 파싱 오류: {info['error']}\n\n---\n"
-            results.append({"URL": url, "제목": title, "상태": "파싱 오류", "분석결과": info['error'], "추출대본": ""})
-            continue
+            all_markdown_output += f"⚠️ 유튜브 자막 추출 실패 (틱톡/릴스 등). 원본 영상 다운로드 및 분석을 시도합니다... (URL: {url})\n\n"
             
         transcript = info.get("transcript", "")
+        downloaded_video = None
+        
         if not transcript or "자막을 가져올 수 없습니다" in transcript:
-            all_markdown_output += f"⚠️ 자막 추출 실패 (제목: {title})\n\n---\n"
-            results.append({"URL": url, "제목": title, "상태": "자막 추출 실패", "분석결과": "", "추출대본": ""})
-            continue
-            
+            downloaded_video = download_video_for_analysis(url)
+            if not downloaded_video:
+                all_markdown_output += f"❌ 영상 분석 및 다운로드 실패 (제목: {title})\n\n---\n"
+                results.append({"URL": url, "제목": title, "상태": "분석 실패", "분석결과": "", "추출대본": ""})
+                continue
+                
         image_info = None
         # 분석용 이미지는 첫 번째 이미지만 사용
         first_image = image_files[0] if image_files else None
@@ -111,7 +113,16 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
             if "오류" in image_info:
                 image_info = None
                 
-        analysis_result = analyze_shorts(transcript, image_info, script_type=script_mode, generate_image_prompt=generate_image_prompt)
+        if downloaded_video:
+            analysis_result = analyze_shorts("", image_info, script_type=script_mode, video_path=downloaded_video, generate_image_prompt=generate_image_prompt)
+            # 분석 완료 후 임시 비디오 삭제
+            try:
+                os.remove(downloaded_video)
+            except:
+                pass
+        else:
+            analysis_result = analyze_shorts(transcript, image_info, script_type=script_mode, generate_image_prompt=generate_image_prompt)
+            
         all_markdown_output += analysis_result + "\n\n---\n"
         
         clean_script = extract_script(analysis_result)
@@ -221,10 +232,10 @@ with gr.Blocks(title="유튜브 쇼츠 제품/시장성 분석기", theme=gr.the
     
     with gr.Tabs():
         with gr.Tab("1. 🎬 원본(소스) 입력"):
-            gr.Markdown("### AI가 분석하고 베껴올 타겟 영상(원본)을 선택하세요.")
+            gr.Markdown("### AI가 분석하고 베껴올 타겟 영상(원본)을 선택하세요. (유튜브 쇼츠, 틱톡, 인스타 릴스 모두 가능!)")
             with gr.Row():
                 with gr.Column():
-                    yt_input = gr.Textbox(label="유튜브 쇼츠 URL 리스트", lines=4, placeholder="여기에 주소를 넣거나, 우측에 영상을 직접 올리세요.")
+                    yt_input = gr.Textbox(label="유튜브/틱톡/릴스 URL 리스트", lines=4, placeholder="여기에 주소를 넣거나, 우측에 영상을 직접 올리세요.")
                 with gr.Column():
                     source_video = gr.Video(label="내 PC 원본 영상 업로드 (유튜브 주소 대신 사용)", interactive=True)
                     

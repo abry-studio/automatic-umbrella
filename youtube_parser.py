@@ -1,5 +1,7 @@
 from youtube_transcript_api import YouTubeTranscriptApi
 import yt_dlp
+import os
+import uuid
 
 def get_youtube_info(url):
     """
@@ -37,3 +39,27 @@ def get_youtube_info(url):
         result["error"] = f"유튜브 정보 추출 중 오류가 발생했습니다: {e}"
         
     return result
+
+def download_video_for_analysis(url):
+    """
+    자막이 없는 틱톡, 릴스, 또는 쇼츠를 임시로 다운로드하여 파일 경로를 반환합니다.
+    """
+    temp_filename = f"temp_download_{uuid.uuid4().hex}.mp4"
+    
+    ydl_opts = {
+        'quiet': True,
+        'format': 'bestvideo[ext=mp4]+bestaudio[ext=m4a]/best[ext=mp4]/best',
+        'outtmpl': temp_filename,
+    }
+    
+    try:
+        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+            ydl.download([url])
+            
+        if os.path.exists(temp_filename):
+            return temp_filename
+        else:
+            return None
+    except Exception as e:
+        print(f"다운로드 실패: {e}")
+        return None

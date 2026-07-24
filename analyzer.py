@@ -44,11 +44,18 @@ def analyze_shorts(transcript, image_info=None, script_type="standard"):
 - Vrew나 CapCut 같은 프로그램에 바로 복사해서 더빙에 사용할 수 있도록 화자나 효과음 지시문 없이 '순수 대본 텍스트' 형식으로 깔끔하게 포맷팅해주세요.
 """
     
-    try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt
-        )
-        return response.text
-    except Exception as e:
-        return f"분석 중 오류가 발생했습니다: {e}"
+    import time
+    
+    max_retries = 3
+    for attempt in range(max_retries):
+        try:
+            response = client.models.generate_content(
+                model='gemini-2.5-flash',
+                contents=prompt
+            )
+            return response.text
+        except Exception as e:
+            if "503" in str(e) and attempt < max_retries - 1:
+                time.sleep(5)  # 서버 과부하 시 5초 대기 후 재시도
+                continue
+            return f"분석 중 오류가 발생했습니다: {e}"

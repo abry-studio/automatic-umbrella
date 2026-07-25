@@ -36,7 +36,15 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
     video_files = []
     
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-    out_dir = f"output_{timestamp}"
+    
+    # 구글 코랩(Google Colab) 환경인지 감지하여 드라이브에 자동 저장
+    if os.path.exists('/content/drive/MyDrive'):
+        base_dir = '/content/drive/MyDrive/Shorts_Factory_Output'
+        os.makedirs(base_dir, exist_ok=True)
+        out_dir = f"{base_dir}/output_{timestamp}"
+    else:
+        out_dir = f"output_{timestamp}"
+        
     os.makedirs(out_dir, exist_ok=True)
     
     # 1. 로컬 소스 비디오가 있으면 우선 처리
@@ -161,7 +169,7 @@ def process_batch_data(urls_text, source_video, image_files, bgm_file, script_ty
     df = pd.DataFrame(results)
     df.to_excel(excel_path, index=False)
     
-    zip_path = f"쇼츠분석_압축_{timestamp}.zip"
+    zip_path = f"{out_dir}/쇼츠분석_압축_{timestamp}.zip"
     with zipfile.ZipFile(zip_path, 'w') as zipf:
         zipf.write(excel_path, arcname=os.path.basename(excel_path))
         for audio in audio_files:

@@ -2,7 +2,7 @@ gradio
 google-genai
 yt-dlp
 youtube-transcript-api
-moviepy
+moviepy==1.0.3
 edge-tts
 python-dotenv
 pillow

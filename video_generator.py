@@ -1,4 +1,4 @@
-from moviepy import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, CompositeAudioClip
+from moviepy.editor import ImageClip, AudioFileClip, CompositeVideoClip, concatenate_videoclips, concatenate_audioclips, CompositeAudioClip
 import os
 import math
 from PIL import Image, ImageDraw, ImageFont
@@ -37,7 +37,7 @@ def create_text_clip(text, duration, width=1080, height=1920):
     tmp_path = os.path.join(temp_dir, f"sub_{hash(text)}.png")
     img.save(tmp_path)
     
-    txt_clip = ImageClip(tmp_path).with_duration(duration)
+    txt_clip = ImageClip(tmp_path).set_duration(duration)
     return txt_clip
 
 def create_video(image_paths, audio_path, output_path="output_video.mp4", script_text="", bgm_path=None):
@@ -67,28 +67,27 @@ def create_video(image_paths, audio_path, output_path="output_video.mp4", script
         clips = []
         for img_path in valid_images:
             # 줌인 효과 대신 단순 슬라이드쇼로 묶기 (안정성 확보)
-            c = ImageClip(img_path).with_duration(img_duration)
+            c = ImageClip(img_path).set_duration(img_duration)
             clips.append(c)
             
         video_clip = concatenate_videoclips(clips, method="compose")
         
         # 3. 배경음악(BGM) 합성
         if bgm_path and os.path.exists(bgm_path):
-            bgm_clip = AudioFileClip(bgm_path).with_volume_scaled(0.1) # BGM 볼륨 10%로 줄이기
+            bgm_clip = AudioFileClip(bgm_path).volumex(0.1) # BGM 볼륨 10%로 줄이기
             
             # BGM이 더 짧으면 반복, 길면 자르기
             if bgm_clip.duration < duration:
-                # 간단한 반복 처리 (필요시 moviepy audio_loop 사용)
                 num_loops = math.ceil(duration / bgm_clip.duration)
-                bgm_clip = concatenate_videoclips([bgm_clip] * num_loops).with_duration(duration)
+                bgm_clip = concatenate_audioclips([bgm_clip] * num_loops).set_duration(duration)
             else:
-                bgm_clip = bgm_clip.with_duration(duration)
+                bgm_clip = bgm_clip.set_duration(duration)
                 
             # 음성과 BGM 합성
             final_audio = CompositeAudioClip([audio_clip, bgm_clip])
-            video_clip = video_clip.with_audio(final_audio)
+            video_clip = video_clip.set_audio(final_audio)
         else:
-            video_clip = video_clip.with_audio(audio_clip)
+            video_clip = video_clip.set_audio(audio_clip)
             
         # 4. 자막 생성 및 합성
         if script_text:
@@ -100,7 +99,7 @@ def create_video(image_paths, audio_path, output_path="output_video.mp4", script
                     # 너무 긴 줄은 적당히 자르거나 한 줄로 표시
                     if len(line) > 20:
                         line = line[:20] + "\\n" + line[20:]
-                    txt_clip = create_text_clip(line, line_duration).with_position('center', 'center').with_start(i * line_duration)
+                    txt_clip = create_text_clip(line, line_duration).set_position(('center', 'center')).set_start(i * line_duration)
                     subtitle_clips.append(txt_clip)
                 
                 # 영상과 자막 합성

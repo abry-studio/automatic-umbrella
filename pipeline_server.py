@@ -415,12 +415,40 @@ async def reset_system_data():
         return {"success": False, "message": f"초기화 중 오류: {e}"}
 
 
+def get_local_ip():
+    """현장 Wi-Fi/모바일 핫스팟 연결 시 노트북의 로컬 IP 자동 감지"""
+    import socket
+    s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    try:
+        s.connect(('10.255.255.255', 1))
+        ip = s.getsockname()[0]
+    except Exception:
+        ip = '127.0.0.1'
+    finally:
+        s.close()
+    return ip
+
+@app.get("/api/network-info")
+async def get_network_info():
+    """현장 스마트폰 접속용 로컬 IP 및 포트 정보 반환"""
+    ip = get_local_ip()
+    return {
+        "localIp": ip,
+        "port": 8500,
+        "mobileUrl": f"http://{ip}:8500",
+        "isHotspotReady": True
+    }
+
+
 # ------------------------------------------------------------------------------
 # 메인 엔트리포인트
 # ------------------------------------------------------------------------------
 if __name__ == "__main__":
+    local_ip = get_local_ip()
     print("=" * 70)
     print(" [뽀삐] 현장 스마트 데이터 파이프라인 & 시트 뷰어 서버 시작")
-    print(" 접속 주소: http://localhost:8500")
+    print(f" ▶ 노트북 접속 주소: http://localhost:8500")
+    print(f" ▶ 현장 폰 접속 주소 (핫스팟 연결 시): http://{local_ip}:8500")
     print("=" * 70)
-    uvicorn.run(app, host="127.0.0.1", port=8500)
+    uvicorn.run(app, host="0.0.0.0", port=8500)
+

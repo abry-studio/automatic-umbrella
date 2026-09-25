@@ -1,0 +1,35 @@
+;;===============================================================
+; -> 천단위의 컴마 없애기
+;;------------------------------------------------------------------------------------------------------------
+(defun c:cmx(/ ss n k kn kk en kna0 a1 a2 a3)
+   (prompt "\n컴마 없애기-> ")
+   (setq ss (ssget))
+   (setq n (sslength ss))
+   (setq k 0)
+   (while (<= 1 n)
+       (setq en (ssname ss k))
+       (if (eq (cdr (assoc 0 (entget en))) "TEXT")
+           (progn
+           (setq ent1 (assoc 1 (entget en)))
+           (setq txt1 (cdr ent1))
+           (setq kn (strlen txt1))
+           (if (/= (wcmatch txt1 "*,*") nil)(progn
+               (setq kk 2)
+               (setq a0 (substr txt1 KK 1))
+               (while (and (/= a0 ",")(<= kk kn))
+                   (setq kk (+ kk 1))
+                   (setq a0 (substr txt1 KK 1))
+               )
+               (if (= a0 ",")(progn
+                   (setq a1 (substr txt1 1 (- kk 1)))
+                   (setq a2 (substr txt1 (+ kk 1) (- kn kk)))
+                   (setq a3 (strcat a1 a2))
+                   (entmod (subst (cons 1 a3) (assoc 1 (entget en))(entget en)))
+               ))
+           ))
+       ))
+       (setq n (- n 1))
+       (setq k (+ k 1))
+    )
+   (prin1)
+)

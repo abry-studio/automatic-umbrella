@@ -1,0 +1,11 @@
+Function CountFontcolor(range_data As Range, criteria As Range) As Long
+    Application.Volatile
+    Dim datax As Range
+    Dim xcolor As Long
+xcolor = criteria.Font.ColorIndex
+For Each datax In range_data
+    If datax.Font.ColorIndex = xcolor Then
+        CountFontcolor = CountFontcolor + 1
+    End If
+Next datax
+End Function

@@ -1,0 +1,13 @@
+Public Function SumByColor(pRange1 As Range, pRange2 As Range) As Double
+'Update by Extendoffice
+Application.Volatile
+Dim rng As Range
+Dim xTotal As Double
+xTotal = 0
+For Each rng In pRange1
+    If rng.Font.Color = pRange2.Font.Color Then
+        xTotal = xTotal + rng.Value
+    End If
+Next
+SumByColor = xTotal
+End Function

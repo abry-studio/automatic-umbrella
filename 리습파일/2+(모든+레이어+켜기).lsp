@@ -1,0 +1,18 @@
+
+(defun C:2 (/ cmd ename elist lyr)
+     (setq cmd (getvar "cmdecho"))
+     (setvar "cmdecho" 0)
+     (setq ename (car (entsel "\n Select an entity :")))
+     (while (null ename)
+            (setq ename (car (entsel "\n Select again :")))
+     )
+     (setq elist (entget ename))
+     (setq lyr (assoc 8 elist))
+     (command "layer" "set" (cdr lyr) "")
+     (command "layer" "off" "*" "" "")
+     (prompt (strcat "\n Now the current layer is " (cdr lyr) "."))
+     (setvar "cmdecho" cmd)
+)
+(prin1)
+(C:LF)
+

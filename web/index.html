@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>뽀삐 현장 공정 대시보드 (그래프 & 실속 엑셀표)</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Pretendard:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <div id="app">
+    <!-- 최상단 헤더 -->
+    <header class="top-nav">
+      <div class="nav-brand">
+        <div class="brand-logo">🐕</div>
+        <div class="brand-info">
+          <h1>뽀삐 현장 공정 대시보드 <span class="badge-vba">실제 827세대 실시간 연동</span></h1>
+          <p class="brand-sub">복잡한 글자는 싹 빼고! 한눈에 보이는 실시간 공정 그래프와 실속 엑셀표</p>
+        </div>
+      </div>
+      <div class="nav-actions">
+        <button id="btnRefreshData" class="btn btn-warning" title="엑셀 파일에서 최신 827세대 현황 즉시 다시 읽기">
+          <span class="icon">📥</span> 엑셀 데이터 동기화
+        </button>
+        <button id="btnSaveXlsm" class="btn btn-success" title="엑셀 파일에 매크로 유지하며 영구 저장">
+          <span class="icon">💾</span> 엑셀(.xlsm) 저장
+        </button>
+        <button id="btnOpenExcel" class="btn btn-primary" title="바탕화면의 엑셀 프로그램 직접 열기">
+          <span class="icon">🚀</span> 엑셀 파일 열기
+        </button>
+        <button id="btnResetDashboard" class="btn btn-danger" title="안전 자동 백업 후 초기화 (승인 창 없이 즉시 작동)">
+          <span class="icon">🔄</span> 초기화
+        </button>
+      </div>
+    </header>
+
+    <!-- 파일 드롭존 (심플) -->
+    <section class="drop-strip">
+      <div class="drop-box" id="dropZone">
+        <input type="file" id="fileInput" accept="image/*,.xlsx,.xlsm,.xls,.csv" hidden>
+        <span class="drop-icon">📷</span>
+        <div class="drop-msg">
+          <strong>사진이나 엑셀 파일을 여기에 툭 던져 넣으세요!</strong>
+          <span>내용을 분석해서 엑셀 표에 쏙 넣고, 그래프를 자동으로 쑥 올려줍니다. (승인 확인 없이 즉시 실행)</span>
+        </div>
+        <button class="btn btn-browse" onclick="document.getElementById('fileInput').click()">파일 선택</button>
+      </div>
+    </section>
+
+    <!-- 메인 대시보드 영역 (그래프 + 사장님 수기 입력 + 실속 엑셀 표) -->
+    <div class="dashboard-body">
+      <!-- 1. 상단: 한눈에 보는 공종별 공정 진행률 그래프 & 카드 -->
+      <section class="charts-section">
+        <div class="section-title">
+          <h2>📊 한눈에 보는 공종별 공정 진행률 (<span id="siteTitleText">도마변동9 현장 실제 827세대 데이터</span>)</h2>
+          <span class="title-sub" id="syncStatusText">엑셀 대장과 실시간 동기화 완료</span>
+        </div>
+
+        <div class="kpi-grid">
+          <!-- 전체 공정률 -->
+          <div class="kpi-card total-card">
+            <div class="kpi-header">
+              <span class="kpi-tag">현장 전체 진도율</span>
+              <span class="kpi-val" id="totalRateText">46%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-total" id="totalRateBar" style="width: 46%;"></div>
+            </div>
+            <div class="kpi-footer">
+              <span id="totalCountText">총 2,356세대 완료 / 4,135세대 예정</span>
+            </div>
+          </div>
+
+          <!-- 조적 진행률 -->
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-tag"><span class="badge-icon">🧱</span> 조적 공정</span>
+              <span class="kpi-val" id="rateJojuk">68%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-jojuk" id="barJojuk" style="width: 68%;"></div>
+            </div>
+            <div class="kpi-footer">
+              <span id="countJojuk">561세대 완료 / 827세대</span>
+            </div>
+          </div>
+
+          <!-- 세대 미장 진행률 -->
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-tag"><span class="badge-icon">🖌️</span> 세대 미장</span>
+              <span class="kpi-val" id="rateMijang">68%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-mijang" id="barMijang" style="width: 68%;"></div>
+            </div>
+            <div class="kpi-footer">
+              <span id="countMijang">561세대 완료 / 827세대</span>
+            </div>
+          </div>
+
+          <!-- 문틀사춤 진행률 -->
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-tag"><span class="badge-icon">🚪</span> 문틀사춤</span>
+              <span class="kpi-val" id="rateSachum">62%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-sachum" id="barSachum" style="width: 62%;"></div>
+            </div>
+            <div class="kpi-footer">
+              <span id="countSachum">509세대 완료 / 827세대</span>
+            </div>
+          </div>
+
+          <!-- 계단실 진행률 -->
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-tag"><span class="badge-icon">🪜</span> 계단실</span>
+              <span class="kpi-val" id="rateStairs">19%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-tile" id="barStairs" style="width: 19%;"></div>
+            </div>
+            <div class="kpi-footer">
+              <span id="countStairs">157개소 완료 / 827구역</span>
+            </div>
+          </div>
+
+          <!-- 미장 마감 진행률 -->
+          <div class="kpi-card">
+            <div class="kpi-header">
+              <span class="kpi-tag"><span class="badge-icon">🎨</span> 미장 마감</span>
+              <span class="kpi-val" id="rateFinish">13%</span>
+            </div>
+            <div class="progress-bar-wrap">
+              <div class="progress-bar-fill fill-bangtong" id="barFinish" style="width: 13%;"></div>
+            </div>
+            <div class="kpi-footer">
+              <span id="countFinish">107세대 완료 / 827세대</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 2. 사장님 전용 수기 일지 직접 입력 패널 (관리하는 맛!) -->
+      <section class="manual-input-section">
+        <div class="manual-header">
+          <div class="manual-title">
+            <h3>✍️ 사장님 수기 현장 일지 직접 입력 <span class="badge-manual">엑셀 실시간 연동</span></h3>
+            <p class="manual-sub">직접 수기로 적어서 관리하는 맛! 입력 즉시 엑셀 대장과 동별 시트에 꽂아넣고 진도율에 반영됩니다.</p>
+          </div>
+          <div class="manual-actions">
+            <span class="manual-stats-badge" id="siteUnitsBadge">🏢 도마변동9 (한화) 7개동 827세대 대장 연동</span>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openSiteSettingsModal()">⚙️ 다른 현장 맞춤 설정</button>
+          </div>
+        </div>
+
+        <form id="manualEntryForm" class="manual-form" onsubmit="event.preventDefault(); submitManualEntry();">
+          <div class="form-row">
+            <div class="form-group form-date">
+              <label for="inputDate">📅 작업일자</label>
+              <input type="date" id="inputDate" class="form-input">
+            </div>
+
+            <div class="form-group form-dong">
+              <label for="selectDong">🏢 동 선택</label>
+              <select id="selectDong" class="form-select">
+                <option value="101동">101동</option>
+                <option value="102동" selected>102동</option>
+                <option value="103동">103동</option>
+                <option value="104동">104동</option>
+                <option value="105동">105동</option>
+                <option value="106동">106동</option>
+                <option value="107동">107동</option>
+              </select>
+            </div>
+
+            <div class="form-group form-unit">
+              <label for="inputUnit">🚪 호수</label>
+              <input type="text" id="inputUnit" class="form-input" placeholder="예: 1005호" value="1005호">
+            </div>
+
+            <div class="form-group form-trade">
+              <label for="selectTrade">🔨 공종 선택</label>
+              <select id="selectTrade" class="form-select">
+                <option value="조적" selected>🧱 조적</option>
+                <option value="세대미장">🖌️ 세대미장</option>
+                <option value="문틀사춤">🚪 문틀사춤</option>
+                <option value="계단실">🪜 계단실</option>
+                <option value="타일">🔲 타일</option>
+                <option value="방통">🌊 방통</option>
+                <option value="먹매김">📐 먹매김</option>
+              </select>
+            </div>
+
+            <div class="form-group form-status">
+              <label for="selectStatus">📌 상태</label>
+              <select id="selectStatus" class="form-select">
+                <option value="완료" selected>✅ 완료</option>
+                <option value="진행">⏳ 진행</option>
+                <option value="대기">⏸️ 대기</option>
+              </select>
+            </div>
+
+            <div class="form-group form-desc">
+              <label for="inputDesc">📝 작업 내용 및 세부 부위</label>
+              <input type="text" id="inputDesc" class="form-input" placeholder="예: 안방 및 주방 조적 쌓기 완료">
+            </div>
+
+            <div class="form-group form-note">
+              <label for="inputNote">📋 메모 / 감리 검측</label>
+              <input type="text" id="inputNote" class="form-input" placeholder="예: 감리 검측 통과 (수기 작성)">
+            </div>
+
+            <div class="form-group form-btn">
+              <label>&nbsp;</label>
+              <button type="submit" id="btnSubmitManual" class="btn btn-submit">
+                <span class="icon">✍️</span> 엑셀에 수기 즉시 등록
+              </button>
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- 3. 하단: 실속 엑셀 표 -->
+      <section class="table-section">
+        <div class="table-toolbar">
+          <div class="toolbar-left">
+            <h3>📋 현장 공정 일지 표 (실제 엑셀 대장 데이터)</h3>
+            <span class="table-count" id="tableRowCount">총 0건 로딩중...</span>
+          </div>
+          <!-- 빠른 필터 버튼들 -->
+          <div class="toolbar-filters">
+            <button class="filter-btn active" data-filter="all">전체 보기</button>
+            <button class="filter-btn" data-filter="조적">🧱 조적만</button>
+            <button class="filter-btn" data-filter="미장">🖌️ 미장만</button>
+            <button class="filter-btn" data-filter="문틀사춤">🚪 사춤만</button>
+            <button class="filter-btn" data-filter="계단실">🪜 계단실만</button>
+            <button class="filter-btn" data-filter="타일">🔲 타일만</button>
+            <button class="filter-btn" data-filter="방통">🌊 방통만</button>
+            <button class="filter-btn" data-filter="완료">✅ 완료된 것만</button>
+          </div>
+        </div>
+
+        <div class="table-wrapper">
+          <table class="dashboard-table">
+            <thead>
+              <tr>
+                <th style="width: 60px;">순번</th>
+                <th style="width: 110px;">작업일자</th>
+                <th style="width: 130px;">위치 (동·호수)</th>
+                <th style="width: 100px;">공종</th>
+                <th>작업 내용 및 부위 (클릭하여 직접 수정 가능)</th>
+                <th style="width: 90px;">상태 (클릭 시 변경)</th>
+                <th style="width: 150px;">비고 / 메모 (클릭하여 직접 수정)</th>
+              </tr>
+            </thead>
+            <tbody id="dashboardTableBody">
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- 하단 상태 바 -->
+    <footer class="bottom-bar">
+      <div class="bar-left">
+        <span class="status-indicator online"></span>
+        <span>뽀삐 현장 도우미 연결됨 · 실제 통합_현장관리및공정관리대장.xlsm 연동 활성화</span>
+      </div>
+      <div class="bar-right">
+        <span>수기로 적거나 사진/엑셀을 넣으면 승인 질문 없이 즉시 자동 처리됩니다.</span>
+      </div>
+    </footer>
+  </div>
+
+  <!-- 다른 현장 맞춤 설정 모달 (새 현장 대비용) -->
+  <div id="siteSettingsModal" class="modal-overlay" style="display: none;" onclick="if(event.target===this) closeSiteSettingsModal();">
+    <div class="modal-box">
+      <div class="modal-header">
+        <h3>🏢 다른 현장 맞춤 설정</h3>
+        <button type="button" class="modal-close" onclick="closeSiteSettingsModal()">✕</button>
+      </div>
+      <p style="font-size: 13px; color: #94a3b8; margin-bottom: 16px; line-height: 1.5;">
+        새로운 현장으로 이동하실 때 현장명과 세대수를 설정하시면, 대시보드와 진도율이 해당 현장 규격에 맞춰 <strong>0%로 깨끗하게 즉시 준비</strong>됩니다.
+      </p>
+      <form onsubmit="event.preventDefault(); applySiteSettings();">
+        <div style="display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px;">
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700; color: #cbd5e1;">🏢 현장 명칭</label>
+            <input type="text" id="settingSiteName" class="form-input" placeholder="예: 둔산 자이아이파크, 힐스테이트 1단지" value="도마변동9 (한화)">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700; color: #cbd5e1;">🏠 전체 세대수 (세대)</label>
+            <input type="number" id="settingTotalUnits" class="form-input" placeholder="예: 1000" value="827" min="1">
+          </div>
+          <div class="form-group">
+            <label style="font-size: 12px; font-weight: 700; color: #cbd5e1;">🏗️ 동 구성 목록 (쉼표로 구분)</label>
+            <input type="text" id="settingDongList" class="form-input" placeholder="예: 101동, 102동, 103동, 104동, 105동" value="101동, 102동, 103동, 104동, 105동, 106동, 107동">
+          </div>
+        </div>
+        <div style="display: flex; justify-content: flex-end; gap: 10px;">
+          <button type="button" class="btn btn-secondary" onclick="closeSiteSettingsModal()">취소</button>
+          <button type="submit" class="btn btn-primary">✅ 이 현장으로 맞춤 적용 (초기화 및 준비)</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- 알림 토스트 -->
+  <div id="toast" class="toast"></div>
+
+  <!-- 인라인 실행 스크립트 -->
+  <script>
+    let workLogs = [];
+    let siteSummary = null;
+    let activeFilter = "all";
+    let backupLogsBeforeReset = [];
+
+    // 현장 맞춤 설정 상태 (다른 현장 이동 시 유연하게 대비)
+    let currentSiteSettings = {
+      name: "도마변동9 (한화)",
+      totalUnits: 827,
+      dongList: ["101동", "102동", "103동", "104동", "105동", "106동", "107동"]
+    };
+
+    // DOM 엘리먼트
+    const dashboardTableBody = document.getElementById("dashboardTableBody");
+    const tableRowCount = document.getElementById("tableRowCount");
+    const dropZone = document.getElementById("dropZone");
+    const fileInput = document.getElementById("fileInput");
+    const toast = document.getElementById("toast");
+
+    const btnRefreshData = document.getElementById("btnRefreshData");
+    const btnSaveXlsm = document.getElementById("btnSaveXlsm");
+    const btnOpenExcel = document.getElementById("btnOpenExcel");
+    const btnResetDashboard = document.getElementById("btnResetDashboard");
+
+    const inputDate = document.getElementById("inputDate");
+    const selectDong = document.getElementById("selectDong");
+    const inputUnit = document.getElementById("inputUnit");
+    const selectTrade = document.getElementById("selectTrade");
+    const selectStatus = document.getElementById("selectStatus");
+    const inputDesc = document.getElementById("inputDesc");
+    const inputNote = document.getElementById("inputNote");
+
+    document.addEventListener("DOMContentLoaded", () => {
+      // 오늘 날짜 자동 기본값 채우기
+      const todayStr = new Date().toISOString().split("T")[0];
+      if (inputDate) inputDate.value = todayStr;
+
+      loadSiteSettingsFromStorage();
+      initApp();
+      loadRealDashboardData();
+    });
+
+    function initApp() {
+      // 드래그 앤 드롭
+      dropZone.addEventListener("dragover", (e) => {
+        e.preventDefault();
+        dropZone.classList.add("dragover");
+      });
+      dropZone.addEventListener("dragleave", () => dropZone.classList.remove("dragover"));
+      dropZone.addEventListener("drop", (e) => {
+        e.preventDefault();
+        dropZone.classList.remove("dragover");
+        if (e.dataTransfer.files.length > 0) {
+          handleFileUpload(e.dataTransfer.files[0]);
+        }
+      });
+
+      fileInput.addEventListener("change", (e) => {
+        if (e.target.files.length > 0) {
+          handleFileUpload(e.target.files[0]);
+        }
+      });
+
+      // 버튼 이벤트
+      if (btnRefreshData) {
+        btnRefreshData.onclick = () => {
+          loadRealDashboardData(true);
+        };
+      }
+      if (btnSaveXlsm) {
+        btnSaveXlsm.onclick = saveXlsm;
+      }
+      if (btnOpenExcel) {
+        btnOpenExcel.onclick = openExcelFile;
+      }
+      if (btnResetDashboard) {
+        btnResetDashboard.onclick = handleReset;
+      }
+
+      // 필터 버튼 바인딩
+      document.querySelectorAll(".filter-btn").forEach(btn => {
+        btn.onclick = function() {
+          document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+          btn.classList.add("active");
+          activeFilter = btn.dataset.filter;
+          renderTable();
+        };
+      });
+    }
+
+    // 1. 엑셀 실제 대장 데이터 불러오기 (데이터는 읽지 않노 해결!)
+    async function loadRealDashboardData(isManualRefresh = false) {
+      if (isManualRefresh) {
+        showToast("📥 [엑셀 데이터 읽는 중] 통합_현장관리및공정관리대장.xlsm 분석...", "info");
+      }
+
+      try {
+        const res = await fetch("/api/dashboard-data");
+        const data = await res.json();
+        siteSummary = data;
+        workLogs = data.workLogs || [];
+
+        renderCharts(data);
+        renderTable();
+
+        if (isManualRefresh) {
+          showToast("★ [동기화 완료] 실제 827세대 데이터 및 " + workLogs.length + "건 공정 일지를 완벽히 불러왔습니다!", "success");
+        }
+      } catch (err) {
+        console.error("loadRealDashboardData error:", err);
+        showToast("[-] 데이터 로딩 오류: " + err, "error");
+      }
+    }
+
+    // 2. 차트 및 게이지 렌더링 (실제 세대수 기준 및 0% 엄격 처리)
+    function renderCharts(data) {
+      if (!data) return;
+      const totalUnits = (data.totalUnits !== undefined && data.totalUnits !== null) ? Number(data.totalUnits) : (currentSiteSettings.totalUnits || 827);
+      const stats = data.stats || {};
+
+      // 현장 전체 진도율 - 0%가 falsy로 무시되어 46%로 덮어써지지 않도록 엄격 체크!
+      const overallRate = (data.overallRate !== undefined && data.overallRate !== null) ? Number(data.overallRate) : 0;
+      const coreDone = (data.coreDone !== undefined && data.coreDone !== null) ? Number(data.coreDone) : 0;
+      const coreTarget = (data.coreTarget !== undefined && data.coreTarget !== null && Number(data.coreTarget) > 0) ? Number(data.coreTarget) : (totalUnits * 5);
+
+      document.getElementById("totalRateText").textContent = overallRate + "%";
+      document.getElementById("totalRateBar").style.width = overallRate + "%";
+      document.getElementById("totalCountText").textContent = "총 " + coreDone.toLocaleString() + "건 완료 / " + coreTarget.toLocaleString() + "건 예정 (" + totalUnits.toLocaleString() + "세대 기준)";
+
+      // 조적
+      const sJojuk = (stats && stats["조적"] !== undefined) ? stats["조적"] : { done: 0, total: totalUnits, rate: 0 };
+      const rateJojuk = (sJojuk && sJojuk.rate !== undefined && sJojuk.rate !== null) ? Number(sJojuk.rate) : 0;
+      const doneJojuk = (sJojuk && sJojuk.done !== undefined && sJojuk.done !== null) ? Number(sJojuk.done) : 0;
+      const totalJojuk = (sJojuk && sJojuk.total !== undefined && sJojuk.total !== null) ? Number(sJojuk.total) : totalUnits;
+      document.getElementById("rateJojuk").textContent = rateJojuk + "%";
+      document.getElementById("barJojuk").style.width = rateJojuk + "%";
+      document.getElementById("countJojuk").textContent = doneJojuk.toLocaleString() + "세대 완료 / " + totalJojuk.toLocaleString() + "세대";
+
+      // 세대 미장
+      const sMijang = (stats && stats["미장"] !== undefined) ? stats["미장"] : { done: 0, total: totalUnits, rate: 0 };
+      const rateMijang = (sMijang && sMijang.rate !== undefined && sMijang.rate !== null) ? Number(sMijang.rate) : 0;
+      const doneMijang = (sMijang && sMijang.done !== undefined && sMijang.done !== null) ? Number(sMijang.done) : 0;
+      const totalMijang = (sMijang && sMijang.total !== undefined && sMijang.total !== null) ? Number(sMijang.total) : totalUnits;
+      document.getElementById("rateMijang").textContent = rateMijang + "%";
+      document.getElementById("barMijang").style.width = rateMijang + "%";
+      document.getElementById("countMijang").textContent = doneMijang.toLocaleString() + "세대 완료 / " + totalMijang.toLocaleString() + "세대";
+
+      // 문틀사춤
+      const sSachum = (stats && stats["문틀사춤"] !== undefined) ? stats["문틀사춤"] : { done: 0, total: totalUnits, rate: 0 };
+      const rateSachum = (sSachum && sSachum.rate !== undefined && sSachum.rate !== null) ? Number(sSachum.rate) : 0;
+      const doneSachum = (sSachum && sSachum.done !== undefined && sSachum.done !== null) ? Number(sSachum.done) : 0;
+      const totalSachum = (sSachum && sSachum.total !== undefined && sSachum.total !== null) ? Number(sSachum.total) : totalUnits;
+      document.getElementById("rateSachum").textContent = rateSachum + "%";
+      document.getElementById("barSachum").style.width = rateSachum + "%";
+      document.getElementById("countSachum").textContent = doneSachum.toLocaleString() + "세대 완료 / " + totalSachum.toLocaleString() + "세대";
+
+      // 계단실
+      const sStairs = (stats && stats["계단실"] !== undefined) ? stats["계단실"] : { done: 0, total: totalUnits, rate: 0 };
+      const rateStairs = (sStairs && sStairs.rate !== undefined && sStairs.rate !== null) ? Number(sStairs.rate) : 0;
+      const doneStairs = (sStairs && sStairs.done !== undefined && sStairs.done !== null) ? Number(sStairs.done) : 0;
+      const totalStairs = (sStairs && sStairs.total !== undefined && sStairs.total !== null) ? Number(sStairs.total) : totalUnits;
+      document.getElementById("rateStairs").textContent = rateStairs + "%";
+      document.getElementById("barStairs").style.width = rateStairs + "%";
+      document.getElementById("countStairs").textContent = doneStairs.toLocaleString() + "개소 완료 / " + totalStairs.toLocaleString() + "구역";
+
+      // 미장 마감
+      const sFinish = (stats && stats["미장마감"] !== undefined) ? stats["미장마감"] : { done: 0, total: totalUnits, rate: 0 };
+      const rateFinish = (sFinish && sFinish.rate !== undefined && sFinish.rate !== null) ? Number(sFinish.rate) : 0;
+      const doneFinish = (sFinish && sFinish.done !== undefined && sFinish.done !== null) ? Number(sFinish.done) : 0;
+      const totalFinish = (sFinish && sFinish.total !== undefined && sFinish.total !== null) ? Number(sFinish.total) : totalUnits;
+      document.getElementById("rateFinish").textContent = rateFinish + "%";
+      document.getElementById("barFinish").style.width = rateFinish + "%";
+      document.getElementById("countFinish").textContent = doneFinish.toLocaleString() + "세대 완료 / " + totalFinish.toLocaleString() + "세대";
+    }
+
+    // 3. 실속 엑셀 표 렌더링
+    function renderTable(newSeq = null) {
+      dashboardTableBody.innerHTML = "";
+
+      const filteredLogs = workLogs.filter(item => {
+        if (activeFilter === "all") return true;
+        if (activeFilter === "완료") return item.status === "완료";
+        return (item.trade && item.trade.includes(activeFilter)) || activeFilter.includes(item.trade);
+      });
+
+      if (workLogs.length === 0) {
+        tableRowCount.textContent = "총 0건 기록됨 (초기화 완료 / 새 작업 입력 대기)";
+      } else {
+        tableRowCount.textContent = "총 " + filteredLogs.length + "건 기록됨 (전체 " + workLogs.length + "건 중)";
+      }
+
+      if (filteredLogs.length === 0) {
+        const emptyTr = document.createElement("tr");
+        if (workLogs.length === 0) {
+          emptyTr.innerHTML = `
+            <td colspan="7" class="empty-guide">
+              <div style="font-size: 42px; margin-bottom: 10px;">✨</div>
+              <h4 style="font-size: 18px; color: #38bdf8;">대시보드가 깨끗하게 초기화되었습니다!</h4>
+              <p style="color: #94a3b8; font-size: 13px; max-width: 520px; margin: 0 auto 18px auto;">
+                이전 기록이 모두 비워졌습니다. 이제 위 <strong>'✍️ 사장님 수기 직접 입력'</strong> 바에서 새 일지를 적으시거나,<br>
+                <strong>사진이나 엑셀 파일</strong>을 넣으시면 새 데이터만 깔끔하게 등록됩니다!
+              </p>
+              <div style="display: flex; gap: 10px; justify-content: center; flex-wrap: wrap;">
+                <button class="btn btn-secondary" onclick="handleReset()">↩️ 직전 데이터 복원</button>
+                <button class="btn btn-warning" onclick="loadRealDashboardData(true)">📥 엑셀 827세대 전체 불러오기</button>
+              </div>
+            </td>
+          `;
+        } else {
+          emptyTr.innerHTML = `
+            <td colspan="7" class="empty-guide">
+              <div style="font-size: 36px; margin-bottom: 8px;">📋</div>
+              <h4>선택하신 [${activeFilter}] 공정 기록이 없습니다.</h4>
+              <p>위 '수기 직접 입력' 바에서 등록하시거나 사진/엑셀을 넣으시면 즉시 등록됩니다.</p>
+              <button class="btn btn-primary" onclick="resetFilterToAll()">전체 일지 목록 보기</button>
+            </td>
+          `;
+        }
+        dashboardTableBody.appendChild(emptyTr);
+        return;
+      }
+
+      filteredLogs.forEach(item => {
+        const tr = document.createElement("tr");
+        if (newSeq && item.seq === newSeq) {
+          tr.classList.add("new-row-pulse");
+        }
+
+        let tradeIcon = "🧱";
+        if (item.trade && item.trade.includes("미장")) tradeIcon = "🖌️";
+        else if (item.trade && item.trade.includes("사춤")) tradeIcon = "🚪";
+        else if (item.trade && item.trade.includes("계단")) tradeIcon = "🪜";
+        else if (item.trade && item.trade.includes("타일")) tradeIcon = "🔲";
+        else if (item.trade && item.trade.includes("방통")) tradeIcon = "🌊";
+        else if (item.trade && item.trade.includes("먹")) tradeIcon = "📐";
+
+        let statusClass = "pill-prog";
+        if (item.status === "완료") statusClass = "pill-done";
+        else if (item.status === "대기") statusClass = "pill-prog";
+
+        tr.innerHTML = `
+          <td style="font-weight: 700; color: #94a3b8;">${item.seq}</td>
+          <td style="color: #cbd5e1;">${item.date}</td>
+          <td style="font-weight: 700; color: #f8fafc;">${item.location}</td>
+          <td><span class="trade-tag">${tradeIcon} ${item.trade}</span></td>
+          <td class="editable-cell" contenteditable="true" title="클릭하여 내용 직접 수정" onblur="handleCellEdit(${item.seq}, 'desc', this.innerText)">${item.desc}</td>
+          <td>
+            <span class="pill ${statusClass} pill-clickable" title="클릭 시 상태 전환 (완료 ↔ 진행 ↔ 대기)" onclick="toggleItemStatus(${item.seq})">
+              ${item.status}
+            </span>
+          </td>
+          <td class="editable-cell" contenteditable="true" style="color: #94a3b8;" title="클릭하여 메모 직접 작성" onblur="handleCellEdit(${item.seq}, 'note', this.innerText)">${item.note || '-'}</td>
+        `;
+
+        dashboardTableBody.appendChild(tr);
+      });
+    }
+
+    function resetFilterToAll() {
+      document.querySelectorAll(".filter-btn").forEach(b => b.classList.remove("active"));
+      const allBtn = document.querySelector('.filter-btn[data-filter="all"]');
+      if (allBtn) allBtn.classList.add("active");
+      activeFilter = "all";
+      renderTable();
+    }
+
+    // 4. 사장님 수기 직접 입력 등록 (관리하는 맛!)
+    async function submitManualEntry() {
+      const dateVal = inputDate.value || new Date().toISOString().split("T")[0];
+      const dongVal = selectDong.value;
+      const unitVal = inputUnit.value.trim() || "1001호";
+      const tradeVal = selectTrade.value;
+      const statusVal = selectStatus.value;
+      const descVal = inputDesc.value.trim() || `${dongVal} ${unitVal} ${tradeVal} ${statusVal}`;
+      const noteVal = inputNote.value.trim() || "사장님 수기 현장 관리 등록";
+
+      showToast("✍️ [수기 등록 중] 엑셀 대장 및 동별 시트에 기록 중...", "info");
+
+      try {
+        const payload = {
+          dong: dongVal,
+          unit: unitVal,
+          trade: tradeVal,
+          status: statusVal,
+          description: descVal,
+          date: dateVal,
+          note: noteVal
+        };
+
+        const res = await fetch("/api/manual-entry", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const data = await res.json();
+        if (data.success) {
+          const newRecord = {
+            seq: workLogs.length + 1,
+            date: dateVal,
+            location: `${dongVal} ${unitVal}`,
+            trade: tradeVal,
+            desc: descVal,
+            status: statusVal,
+            note: noteVal
+          };
+          workLogs.unshift(newRecord);
+
+          if (backupLogsBeforeReset.length > 0 && workLogs.length <= 10) {
+            updateChartsFromCurrentLogs();
+          } else if (data.dashboard) {
+            siteSummary = data.dashboard;
+            renderCharts(data.dashboard);
+          }
+
+          renderTable(newRecord.seq);
+
+          // 폼 일부 초기화 및 호수 자동 다음 번호 제안
+          inputDesc.value = "";
+          inputNote.value = "";
+          const numMatch = unitVal.match(/(\d+)/);
+          if (numMatch) {
+            const nextNum = parseInt(numMatch[1]) + 1;
+            inputUnit.value = nextNum + "호";
+          }
+
+          showToast("★ [" + dongVal + " " + unitVal + "] " + tradeVal + " 수기 등록 완료! 엑셀과 그래프에 즉시 반영되었습니다.", "success");
+        } else {
+          showToast("[-] 등록 실패: " + data.message, "error");
+        }
+      } catch (err) {
+        showToast("[-] 통신 오류: " + err, "error");
+      }
+    }
+
+    function updateChartsFromCurrentLogs() {
+      const counts = { "조적": 0, "미장": 0, "문틀사춤": 0, "계단실": 0, "미장마감": 0 };
+      workLogs.forEach(l => {
+        if (l.status === "완료") {
+          if (l.trade.includes("조적")) counts["조적"]++;
+          else if (l.trade.includes("미장") && !l.trade.includes("마감")) counts["미장"]++;
+          else if (l.trade.includes("사춤")) counts["문틀사춤"]++;
+          else if (l.trade.includes("계단")) counts["계단실"]++;
+          else if (l.trade.includes("마감")) counts["미장마감"]++;
+        }
+      });
+      const totalUnits = currentSiteSettings.totalUnits || 827;
+      const totalDone = Object.values(counts).reduce((a, b) => a + b, 0);
+      const target = totalUnits * 5;
+      const overallRate = target > 0 ? Math.min(Math.round((totalDone / target) * 100), 100) : 0;
+
+      document.getElementById("totalRateText").textContent = overallRate + "%";
+      document.getElementById("totalRateBar").style.width = overallRate + "%";
+      document.getElementById("totalCountText").textContent = "총 " + totalDone.toLocaleString() + "건 완료 / " + target.toLocaleString() + "건 예정 (" + totalUnits.toLocaleString() + "세대 기준)";
+
+      const idMap = {
+        "조적": { rate: "rateJojuk", bar: "barJojuk", count: "countJojuk", unit: "세대" },
+        "미장": { rate: "rateMijang", bar: "barMijang", count: "countMijang", unit: "세대" },
+        "문틀사춤": { rate: "rateSachum", bar: "barSachum", count: "countSachum", unit: "세대" },
+        "계단실": { rate: "rateStairs", bar: "barStairs", count: "countStairs", unit: "개소" },
+        "미장마감": { rate: "rateFinish", bar: "barFinish", count: "countFinish", unit: "세대" }
+      };
+
+      Object.keys(idMap).forEach(trade => {
+        const m = idMap[trade];
+        const done = counts[trade] || 0;
+        const rate = totalUnits > 0 ? Math.min(Math.round((done / totalUnits) * 100), 100) : 0;
+        document.getElementById(m.rate).textContent = rate + "%";
+        document.getElementById(m.bar).style.width = rate + "%";
+        document.getElementById(m.count).textContent = done.toLocaleString() + m.unit + " 완료 / " + totalUnits.toLocaleString() + (m.unit === "개소" ? "구역" : m.unit);
+      });
+    }
+
+    // 5. 표 셀 내용 직접 수정 및 상태 클릭 토글
+    function toggleItemStatus(seq) {
+      const item = workLogs.find(l => l.seq === seq);
+      if (!item) return;
+
+      if (item.status === "완료") item.status = "진행";
+      else if (item.status === "진행") item.status = "대기";
+      else item.status = "완료";
+
+      renderTable();
+      showToast("★ [" + item.location + " " + item.trade + "] 상태가 '" + item.status + "'(으)로 변경되었습니다! (엑셀 저장 클릭 시 영구 반영)", "success");
+    }
+
+    function handleCellEdit(seq, field, newText) {
+      const item = workLogs.find(l => l.seq === seq);
+      if (item) {
+        item[field] = newText.trim();
+        showToast("★ [" + item.location + "] 내용이 수정되었습니다. (엑셀 저장 클릭 시 영구 보존)", "info");
+      }
+    }
+
+    // 6. 파일 드롭 업로드 (승인 질문 없이 무조건 자동 실행!)
+    async function handleFileUpload(file) {
+      showToast("📷 [파일 내용 분석 중] " + file.name + "...", "info");
+      const formData = new FormData();
+      formData.append("file", file);
+
+      try {
+        const res = await fetch("/api/upload", { method: "POST", body: formData });
+        const data = await res.json();
+
+        if (data.success) {
+          if (data.extractedRecords && data.extractedRecords.length > 0) {
+            data.extractedRecords.forEach(rec => {
+              const newSeq = workLogs.length + 1;
+              workLogs.unshift({
+                seq: newSeq,
+                date: rec.date || new Date().toISOString().split("T")[0],
+                location: `${rec.dong || '102동'} ${rec.unit || '1001호'}`,
+                trade: rec.trade || '조적',
+                desc: rec.description || `${rec.unit || ''} ${rec.trade || ''} 시공`,
+                status: rec.status || '완료',
+                note: rec.note || '자동 분석 등록'
+              });
+            });
+            if (backupLogsBeforeReset.length > 0) {
+              updateChartsFromCurrentLogs();
+            } else if (data.dashboard) {
+              siteSummary = data.dashboard;
+              renderCharts(data.dashboard);
+            }
+            renderTable(workLogs[0].seq);
+          } else if (data.dashboard) {
+            siteSummary = data.dashboard;
+            workLogs = data.dashboard.workLogs || [];
+            renderCharts(data.dashboard);
+            renderTable();
+          }
+          showToast("★ [분석 완료] " + file.name + " 내용이 엑셀에 쏙 들어가고 그래프가 쑥 올랐습니다!", "success");
+        } else {
+          showToast("[-] 분석 실패: " + (data.detail || "파일 파싱 실패"), "error");
+        }
+      } catch (err) {
+        showToast("[-] 업로드 오류: " + err, "error");
+      }
+    }
+
+    // 7. 엑셀 영구 저장
+    async function saveXlsm() {
+      showToast("💾 [.xlsm 영구 저장 중] 매크로를 안전하게 보존하며 파일에 기록합니다...", "info");
+      try {
+        const res = await fetch("/api/save-xlsm", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ workLogs: workLogs })
+        });
+        const data = await res.json();
+        if (data.success) {
+          showToast("★ [저장 완료] 통합_현장관리및공정관리대장.xlsm 에 완벽하게 저장되었습니다!", "success");
+        } else {
+          showToast("[-] 저장 실패: " + data.message, "error");
+        }
+      } catch (err) {
+        showToast("[-] 저장 통신 오류: " + err, "error");
+      }
+    }
+
+    // 8. 엑셀 프로그램 열기
+    async function openExcelFile() {
+      showToast("🚀 [엑셀 프로그램 실행 중] 바탕화면의 엑셀 파일을 사용자 화면에 띄웁니다...", "info");
+      try {
+        const res = await fetch("/api/open-excel", { method: "POST" });
+        const data = await res.json();
+        if (data.success) {
+          showToast("★ 엑셀 프로그램이 실행되었습니다!", "success");
+        } else {
+          showToast("[-] 실행 실패: " + data.message, "error");
+        }
+      } catch (err) {
+        showToast("[-] 통신 오류: " + err, "error");
+      }
+    }
+
+    // 9. 초기화 및 즉시 복원 (스마트 토글)
+    let backupSiteSummary = null;
+
+    function handleReset() {
+      // 1. 이미 비워져 있는 상태라면 다시 누르면 즉시 복원 (스마트 토글)
+      if (workLogs.length === 0 && backupLogsBeforeReset.length > 0) {
+        workLogs = [...backupLogsBeforeReset];
+        siteSummary = backupSiteSummary ? JSON.parse(JSON.stringify(backupSiteSummary)) : siteSummary;
+        backupLogsBeforeReset = [];
+        backupSiteSummary = null;
+
+        renderCharts(siteSummary);
+        renderTable();
+        showToast("↩️ [데이터 복원 완료] 직전 작업 목록과 그래프가 원상태로 복구되었습니다!", "success");
+        return;
+      }
+
+      // 2. 비우기 실행 (직전 데이터 안전 백업 보존)
+      backupLogsBeforeReset = [...workLogs];
+      backupSiteSummary = siteSummary ? JSON.parse(JSON.stringify(siteSummary)) : null;
+
+      workLogs = [];
+
+      const totalUnits = currentSiteSettings.totalUnits || 827;
+
+      // 차트 게이지도 전체 공정율 0%로 완벽하게 초기화
+      const emptySummary = {
+        totalUnits: totalUnits,
+        overallRate: 0,
+        coreDone: 0,
+        coreTarget: totalUnits * 5,
+        stats: {
+          "조적": { done: 0, total: totalUnits, rate: 0 },
+          "미장": { done: 0, total: totalUnits, rate: 0 },
+          "문틀사춤": { done: 0, total: totalUnits, rate: 0 },
+          "계단실": { done: 0, total: totalUnits, rate: 0 },
+          "미장마감": { done: 0, total: totalUnits, rate: 0 }
+        }
+      };
+      renderCharts(emptySummary);
+      renderTable();
+
+      // 서버에 자동 백업 트리거
+      try {
+        fetch("/api/reset", { method: "POST" });
+      } catch (e) {}
+
+      showToast("🔄 [초기화 완료] 전체 공정율 0%로 깨끗하게 비워졌습니다! (새 작업을 넣으시거나, 버튼을 다시 누르면 복원)", "info");
+    }
+
+    // 10. 다른 현장 맞춤 설정 모달 제어 및 적용
+    function openSiteSettingsModal() {
+      const modal = document.getElementById("siteSettingsModal");
+      if (modal) modal.style.display = "flex";
+    }
+
+    function closeSiteSettingsModal() {
+      const modal = document.getElementById("siteSettingsModal");
+      if (modal) modal.style.display = "none";
+    }
+
+    function loadSiteSettingsFromStorage() {
+      try {
+        const saved = localStorage.getItem("pp_site_settings");
+        if (saved) {
+          currentSiteSettings = Object.assign(currentSiteSettings, JSON.parse(saved));
+        }
+      } catch (e) {}
+      applySiteSettingsToDOM();
+    }
+
+    function applySiteSettingsToDOM() {
+      const { name, totalUnits, dongList } = currentSiteSettings;
+
+      const siteTitle = document.getElementById("siteTitleText");
+      if (siteTitle) siteTitle.textContent = `${name} 현장 실제 ${totalUnits.toLocaleString()}세대 데이터`;
+
+      const siteBadge = document.getElementById("siteUnitsBadge");
+      if (siteBadge) siteBadge.textContent = `🏢 ${name} ${dongList.length}개동 ${totalUnits.toLocaleString()}세대 대장 연동`;
+
+      const dongSelect = document.getElementById("selectDong");
+      if (dongSelect && dongList && dongList.length > 0) {
+        dongSelect.innerHTML = "";
+        dongList.forEach(dong => {
+          const opt = document.createElement("option");
+          opt.value = dong.trim();
+          opt.textContent = dong.trim();
+          dongSelect.appendChild(opt);
+        });
+      }
+
+      const inputName = document.getElementById("settingSiteName");
+      const inputUnits = document.getElementById("settingTotalUnits");
+      const inputDong = document.getElementById("settingDongList");
+      if (inputName) inputName.value = name;
+      if (inputUnits) inputUnits.value = totalUnits;
+      if (inputDong) inputDong.value = dongList.join(", ");
+    }
+
+    function applySiteSettings() {
+      const inputName = document.getElementById("settingSiteName").value.trim() || "신규 공사 현장";
+      const inputUnits = parseInt(document.getElementById("settingTotalUnits").value) || 500;
+      const rawDong = document.getElementById("settingDongList").value;
+      const inputDong = rawDong.split(/[,，\s]+/).filter(Boolean);
+
+      currentSiteSettings = {
+        name: inputName,
+        totalUnits: inputUnits,
+        dongList: inputDong.length > 0 ? inputDong : ["101동", "102동", "103동"],
+        isCustom: true
+      };
+
+      try {
+        localStorage.setItem("pp_site_settings", JSON.stringify(currentSiteSettings));
+      } catch (e) {}
+
+      applySiteSettingsToDOM();
+      closeSiteSettingsModal();
+
+      // 새 현장 맞춤으로 깨끗이 0% 초기화
+      workLogs = [];
+      backupLogsBeforeReset = [];
+      backupSiteSummary = null;
+
+      const emptySummary = {
+        totalUnits: currentSiteSettings.totalUnits,
+        overallRate: 0,
+        coreDone: 0,
+        coreTarget: currentSiteSettings.totalUnits * 5,
+        stats: {
+          "조적": { done: 0, total: currentSiteSettings.totalUnits, rate: 0 },
+          "미장": { done: 0, total: currentSiteSettings.totalUnits, rate: 0 },
+          "문틀사춤": { done: 0, total: currentSiteSettings.totalUnits, rate: 0 },
+          "계단실": { done: 0, total: currentSiteSettings.totalUnits, rate: 0 },
+          "미장마감": { done: 0, total: currentSiteSettings.totalUnits, rate: 0 }
+        }
+      };
+      renderCharts(emptySummary);
+      renderTable();
+
+      showToast(`🏢 [현장 맞춤 완료] "${currentSiteSettings.name}" (${currentSiteSettings.totalUnits.toLocaleString()}세대) 대시보드가 완벽히 준비되었습니다!`, "success");
+    }
+
+    function showToast(message, type = "info") {
+      toast.textContent = message;
+      toast.style.display = "block";
+      if (type === "success") toast.style.borderLeftColor = "#10b981";
+      else if (type === "error") toast.style.borderLeftColor = "#ef4444";
+      else toast.style.borderLeftColor = "#38bdf8";
+
+      clearTimeout(window._toastTimeout);
+      window._toastTimeout = setTimeout(() => {
+        toast.style.display = "none";
+      }, 3500);
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,31 @@
+Option Explicit
+
+ 
+
+Sub GetImage()
+
+ 
+
+Dim ImageSel As Variant
+Dim Img As Object
+Dim i As Integer
+
+ 
+
+ImageSel = Application.GetOpenFilename(filefilter:="Picture Files,*.jpg;*.bmp;*.tif;*.gif;*.png")
+
+ 
+
+i = 1
+
+ 
+
+If ImageSel = False Then Exit Sub
+
+ 
+
+Set Img = ActiveSheet.Shapes.AddPicture(Filename:=ImageSel, linktofile:=False, Savewithdocument:=True, Left:=Selection.Left + i / 2, Top:=Selection.Top + i / 2, Width:=Selection.Width - i, Height:=Selection.Height - i)
+
+ 
+
+End Sub

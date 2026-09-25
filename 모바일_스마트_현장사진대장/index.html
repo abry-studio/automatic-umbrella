@@ -801,6 +801,28 @@
 
       showModal("loadingModal");
 
+      // 1. 구글 앱스 스크립트 내부 실행 환경 (URL 입력 불필요, 100% 직통 저장)
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run
+          .withSuccessHandler(function(result) {
+            hideModal("loadingModal");
+            if (result && result.success) {
+              document.getElementById("successDesc").innerHTML = 
+                `<strong>${loc} [${trade}] (${currentStatus})</strong><br>구글 드라이브 및 대시보드 시트에 쏙 들어갔습니다!`;
+              showModal("successModal");
+            } else {
+              alert("저장 오류: " + (result ? result.message : "알 수 없는 오류"));
+            }
+          })
+          .withFailureHandler(function(err) {
+            hideModal("loadingModal");
+            alert("구글 저장 중 오류가 발생했습니다: " + (err.message || err));
+          })
+          .processPhotoRecord(payload);
+        return;
+      }
+
+      // 2. 외부 브라우저 / REST API 호출 폴백
       try {
         const response = await fetch(gasUrl, {
           method: "POST",
@@ -820,11 +842,8 @@
         }
       } catch (err) {
         hideModal("loadingModal");
-        // GAS 리다이렉트 특성상 성공했음에도 CORS 에러처럼 보일 수 있으므로 친절 안내
-        console.warn("전송 완료 또는 네트워크 응답:", err);
-        document.getElementById("successDesc").innerHTML = 
-          `<strong>${loc} [${trade}]</strong><br>데이터가 시트로 전송되었습니다!`;
-        showModal("successModal");
+        console.warn("전송 실패:", err);
+        alert("전송 중 네트워크 오류가 발생했습니다. 구글 앱스 스크립트 권한이나 주소를 확인해 주세요.");
       }
     }
 
